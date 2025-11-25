@@ -4,8 +4,8 @@ pipeline {
     environment {
         HARBOR_URL = "10.131.103.92:8090"
         HARBOR_PROJECT = "kp1"
-        TRIVY_OUTPUT_JSON = "trivy-output.json"
         IMAGE_TAG = "${env.BUILD_NUMBER}"
+        TRIVY_OUTPUT_JSON = "trivy-output.json"
     }
 
     stages {
@@ -28,7 +28,7 @@ pipeline {
                         def fullImage = "${HARBOR_URL}/${HARBOR_PROJECT}/${c.name}:${IMAGE_TAG}"
 
                         // Build
-                        sh "docker build -t ${c.name}:${IMAGE_TAG} ./$(c.name)"
+                        sh "docker build -t ${c.name}:${IMAGE_TAG} ./${c.name}"
 
                         // Trivy scan
                         sh """
