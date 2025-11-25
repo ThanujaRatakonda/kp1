@@ -22,7 +22,7 @@ pipeline {
                     // Define both containers
                     def containers = [
                         [name: "student-api", port: 5000, folder: "student-api"],
-                        [name: "process-api", port: 4000, folder: "process-api"]
+                        [name: "marks-api", port: 4000, folder: "marks-api"]
                     ]
 
                     containers.each { c ->
