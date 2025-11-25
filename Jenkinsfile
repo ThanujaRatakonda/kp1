@@ -41,10 +41,11 @@ pipeline {
                         archiveArtifacts artifacts: "${TRIVY_OUTPUT_JSON}", fingerprint: true
 
                         // Check vulnerabilities (safe for both Packages & Vulnerabilities)
-                        def vulnerabilities = sh(script: """
-                            jq '[.Results[] | (.Packages? // [] + .Vulnerabilities? // []) 
-                                | select(.Severity=="CRITICAL" or .Severity=="HIGH")] | length' ${TRIVY_OUTPUT_JSON}
-                        """, returnStdout: true).trim()
+                       def vulnerabilities = sh(script: """
+    jq '[.Results[] | (.Packages // [] | .[]? | select(.Severity=="CRITICAL" or .Severity=="HIGH")) + 
+         (.Vulnerabilities // [] | .[]? | select(.Severity=="CRITICAL" or .Severity=="HIGH"))] | length' ${TRIVY_OUTPUT_JSON}
+""", returnStdout: true).trim()
+
 
                         if (vulnerabilities.toInteger() > 0) {
                             error "Pipeline failed due to CRITICAL/HIGH vulnerabilities in ${c.name}!"
