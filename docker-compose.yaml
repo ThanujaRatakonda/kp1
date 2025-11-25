@@ -1,0 +1,14 @@
+version: "3.9"
+
+services:
+  student-api:
+    build: ./student-api
+    container_name: student-api
+    ports:
+      - "5000:5000"
+
+  marks-api:
+    build: ./marks-api
+    container_name: marks-api
+    ports:
+      - "4000:4000"
