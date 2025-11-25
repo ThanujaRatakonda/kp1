@@ -2,9 +2,9 @@ pipeline {
     agent any
 
     environment {
+        IMAGE_TAG = "${env.BUILD_NUMBER}"
         HARBOR_URL = "10.131.103.92:8090"
         HARBOR_PROJECT = "kp1"
-        IMAGE_TAG = "${env.BUILD_NUMBER}"
         TRIVY_OUTPUT_JSON = "trivy-output.json"
     }
 
@@ -19,27 +19,32 @@ pipeline {
         stage('Build, Scan, Push & Run Containers') {
             steps {
                 script {
-                    // Define your containers and ports
+                    // Define both containers
                     def containers = [
-                        [name: "student-api", port: 5000],
-                        [name: "process-api", port: 4000]
+                        [name: "student-api", port: 5000, folder: "student-api"],
+                        [name: "process-api", port: 4000, folder: "process-api"]
                     ]
 
                     containers.each { c ->
                         def fullImage = "${HARBOR_URL}/${HARBOR_PROJECT}/${c.name}:${IMAGE_TAG}"
 
                         // Build Docker image
-                        sh "docker build -t ${c.name}:${IMAGE_TAG} ./${c.name}"
+                        sh "docker build -t ${c.name}:${IMAGE_TAG} ./${c.folder}"
 
                         // Trivy scan
-                        sh "trivy image ${c.name}:${IMAGE_TAG} --severity CRITICAL,HIGH --format json -o ${TRIVY_OUTPUT_JSON}"
+                        sh """
+                            trivy image ${c.name}:${IMAGE_TAG} \
+                            --severity CRITICAL,HIGH \
+                            --format json \
+                            -o ${TRIVY_OUTPUT_JSON}
+                        """
                         archiveArtifacts artifacts: "${TRIVY_OUTPUT_JSON}", fingerprint: true
 
-                        // Check vulnerabilities using jq (single-line, safe)
-                        def vulnerabilities = sh(
-                            script: "jq '[.Results[].Vulnerabilities[] | select(.Severity == \"CRITICAL\" or .Severity == \"HIGH\")] | length' ${TRIVY_OUTPUT_JSON}",
-                            returnStdout: true
-                        ).trim()
+                        // Check vulnerabilities (safe for both Packages & Vulnerabilities)
+                        def vulnerabilities = sh(script: """
+                            jq '[.Results[] | (.Packages? // [] + .Vulnerabilities? // []) 
+                                | select(.Severity=="CRITICAL" or .Severity=="HIGH")] | length' ${TRIVY_OUTPUT_JSON}
+                        """, returnStdout: true).trim()
 
                         if (vulnerabilities.toInteger() > 0) {
                             error "Pipeline failed due to CRITICAL/HIGH vulnerabilities in ${c.name}!"
@@ -52,7 +57,7 @@ pipeline {
                             sh "docker push ${fullImage}"
                         }
 
-                        // Stop & remove old container
+                        // Stop & remove old container if exists
                         sh "docker ps -q --filter 'publish=${c.port}' | xargs -r docker stop || true"
                         sh "docker ps -aq --filter 'publish=${c.port}' | xargs -r docker rm || true"
 
