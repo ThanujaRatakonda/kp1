@@ -85,9 +85,9 @@ pipeline {
                     echo "Applying Kubernetes Manifests..."
 
                     sh "kubectl apply -f k8s/student-api-deployment.yaml"
-                    sh "kubectl apply -f k8s/student-api-service.yaml"
+                    sh "kubectl apply -f k8s/student-service.yaml"
 
-                    sh "kubectl apply -f k8s/marks-deployment.yaml"
+                    sh "kubectl apply -f k8s/marks-api-deployment.yaml"
                     sh "kubectl apply -f k8s/marks-service.yaml"
                 }
             }
