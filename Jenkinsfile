@@ -78,8 +78,8 @@ pipeline {
 
                     // Replace __IMAGE_TAG__ in YAML
                     sh """
-                        sed -i 's/__IMAGE_TAG__/${IMAGE_TAG}/g' k8s/student-deployment.yaml
-                        sed -i 's/__IMAGE_TAG__/${IMAGE_TAG}/g' k8s/marks-deployment.yaml
+                        sed -i 's/__IMAGE_TAG__/${IMAGE_TAG}/g' k8s/student-api-deployment.yaml
+                        sed -i 's/__IMAGE_TAG__/${IMAGE_TAG}/g' k8s/marks-api-deployment.yaml
                     """
 
                     echo "Applying Kubernetes Manifests..."
