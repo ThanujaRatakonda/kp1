@@ -71,5 +71,27 @@ pipeline {
                 }
             }
         }
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    echo "Updating Kubernetes manifests with tag ${IMAGE_TAG}"
+
+                    // Replace __IMAGE_TAG__ in YAML
+                    sh """
+                        sed -i 's/__IMAGE_TAG__/${IMAGE_TAG}/g' k8s/student-deployment.yaml
+                        sed -i 's/__IMAGE_TAG__/${IMAGE_TAG}/g' k8s/marks-deployment.yaml
+                    """
+
+                    echo "Applying Kubernetes Manifests..."
+
+                    sh "kubectl apply -f k8s/student-api-deployment.yaml"
+                    sh "kubectl apply -f k8s/student-api-service.yaml"
+
+                    sh "kubectl apply -f k8s/marks-deployment.yaml"
+                    sh "kubectl apply -f k8s/marks-service.yaml"
+                }
+            }
+        }
+
     }
 }
