@@ -1,20 +1,12 @@
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: student-api
-  labels:
-    app: student-api
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: student-api
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 0  
-      maxSurge: 1 
   template:
     metadata:
       labels:
@@ -26,21 +18,5 @@ spec:
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 5000
-          initialDelaySeconds: 5
-          periodSeconds: 10
-          timeoutSeconds: 2
-          failureThreshold: 3
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 5000
-          initialDelaySeconds: 15
-          periodSeconds: 20
-          timeoutSeconds: 2
-          failureThreshold: 3
       imagePullSecrets:
-        - name: regcred
+        - name:  regcred
