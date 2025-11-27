@@ -75,7 +75,13 @@ pipeline {
                     // Delete old deployments
                     sh "kubectl delete deployment student-api || true"
                     sh "kubectl delete deployment marks-api || true"
-
+                    
+                    // Delete old Services (idempotent)
+                    sh """
+                    kubectl delete service student-api --ignore-not-found
+                    kubectl delete service marks-api   --ignore-not-found
+                    """
+                    
                     echo "Applying Kubernetes manifests with new images..."
 
                     // Replace __IMAGE_TAG__ in YAML files
