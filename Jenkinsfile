@@ -93,8 +93,6 @@ pipeline {
                 }
             }
         }
-
-        // -------------------- Added: Scale practice --------------------
         stage('Scale Test: Up & Down') {
             steps {
                 script {
@@ -108,15 +106,15 @@ pipeline {
                         echo "marks-api   readyReplicas: $(kubectl get deploy marks-api   -o jsonpath='{.status.readyReplicas}')"
                     '''
 
-                    echo "Scaling DOWN to 1 replica for both services..."
-                    sh 'kubectl scale deployment/student-api --replicas=1'
-                    sh 'kubectl scale deployment/marks-api   --replicas=1'
+                  //  echo "Scaling DOWN to 1 replica for both services..."
+                   // sh 'kubectl scale deployment/student-api --replicas=1'
+                  //  sh 'kubectl scale deployment/marks-api   --replicas=1'
 
-                    echo "Replica counts after scale-down:"
-                    sh '''
-                        echo "student-api readyReplicas: $(kubectl get deploy student-api -o jsonpath='{.status.readyReplicas}')"
-                        echo "marks-api   readyReplicas: $(kubectl get deploy marks-api   -o jsonpath='{.status.readyReplicas}')"
-                    '''
+                 //   echo "Replica counts after scale-down:"
+                 //   sh '''
+                    //    echo "student-api readyReplicas: $(kubectl get deploy student-api -o jsonpath='{.status.readyReplicas}')"
+                    //    echo "marks-api   readyReplicas: $(kubectl get deploy marks-api   -o jsonpath='{.status.readyReplicas}')"
+                  //  '''
                 }
             }
         }
