@@ -90,11 +90,6 @@ pipeline {
 
                     sh "kubectl apply -f k8s/marks-api-deployment.yaml"
                     sh "kubectl apply -f k8s/marks-service.yaml"
-
-                    echo "Image Tag: ${IMAGE_TAG}"
-                    cat k8s/student-api-deployment.yaml
-                    cat k8s/marks-api-deployment.yaml
-
                 }
             }
         }
