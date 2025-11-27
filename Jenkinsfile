@@ -83,6 +83,12 @@ pipeline {
                         sed -i 's/__IMAGE_TAG__/${IMAGE_TAG}/g' k8s/student-api-deployment.yaml
                         sed -i 's/__IMAGE_TAG__/${IMAGE_TAG}/g' k8s/marks-api-deployment.yaml
                     """
+                    echo "Student API Deployment YAML:"
+                    cat k8s/student-api-deployment.yaml
+
+                    echo "Marks API Deployment YAML:"
+                    cat k8s/marks-api-deployment.yaml
+
 
                     // Apply new deployments
                     sh "kubectl apply -f k8s/student-api-deployment.yaml"
