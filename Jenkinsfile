@@ -5,6 +5,7 @@ pipeline {
         IMAGE_TAG = "${env.BUILD_NUMBER}"
         HARBOR_URL = "10.131.103.92:8090"
         HARBOR_PROJECT = "kp1"
+        
     }
 
     stages {
@@ -101,20 +102,5 @@ pipeline {
                 }
             }
         }
-        
-        stage('Port-forward (bind to VM IP)') {
-           steps {
-             script {
-               echo "Starting port-forward for marks-api (4000) and student-api (5000)..."
-
-              // Optional: wait until pods are ready (helps avoid race conditions)
-               sh "kubectl wait --for=condition=ready pod -l app=marks-api --timeout=60s || true"
-              sh "kubectl wait --for=condition=ready pod -l app=student-api --timeout=60s || true"
-
-               // Kill any previous port-forward processes to avoid duplicates
-            sh """
-              pkill -f 'kubectl port-forward deployment/marks-api' || true
-              pkill -f 'kubectl port-forward deployment/student-api' || true
-            """
     }
 }
