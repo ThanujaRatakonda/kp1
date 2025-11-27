@@ -72,15 +72,15 @@ pipeline {
                 script {
                     echo "Deleting old deployments..."
 
-                    // Delete old deployments
-                    sh "kubectl delete deployment student-api || true"
-                    sh "kubectl delete deployment marks-api || true"
                     
-                    // Delete old Services (idempotent)
+                    // Delete old Deployments and Services
                     sh """
-                    kubectl delete service student-api --ignore-not-found
-                    kubectl delete service marks-api   --ignore-not-found
+                    kubectl delete deployment student-api --ignore-not-found
+                    kubectl delete deployment marks-api   --ignore-not-found
+                    kubectl delete service student-api    --ignore-not-found
+                    kubectl delete service marks-api      --ignore-not-found
                     """
+
                     
                     echo "Applying Kubernetes manifests with new images..."
 
