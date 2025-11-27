@@ -18,3 +18,5 @@ spec:
         imagePullPolicy: Always
         ports:
         - containerPort: 4000
+      imagePullSecrets:
+        - name: harbor-secret
