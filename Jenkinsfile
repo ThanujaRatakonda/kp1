@@ -13,6 +13,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 git 'https://github.com/ThanujaRatakonda/kp1.git'
+                sh 'ls -R k8s' 
             }
         }
 
