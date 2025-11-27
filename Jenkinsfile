@@ -67,10 +67,16 @@ pipeline {
             }
         }
 
-        stage('Deploy to Kubernetes') {
+        stage('Delete Old Deployments and Apply New Deployments') {
             steps {
                 script {
-                    echo "Updating Kubernetes manifests with tag ${IMAGE_TAG}"
+                    echo "Deleting old deployments..."
+
+                    // Delete old deployments
+                    sh "kubectl delete deployment student-api || true"
+                    sh "kubectl delete deployment marks-api || true"
+
+                    echo "Applying Kubernetes manifests with new images..."
 
                     // Replace __IMAGE_TAG__ in YAML files
                     sh """
@@ -78,8 +84,7 @@ pipeline {
                         sed -i 's/__IMAGE_TAG__/${IMAGE_TAG}/g' k8s/marks-api-deployment.yaml
                     """
 
-                    echo "Applying Kubernetes manifests..."
-                    // Apply Kubernetes manifests for both APIs
+                    // Apply new deployments
                     sh "kubectl apply -f k8s/student-api-deployment.yaml"
                     sh "kubectl apply -f k8s/student-service.yaml"
 
@@ -88,5 +93,6 @@ pipeline {
                 }
             }
         }
+
     }
 }
