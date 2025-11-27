@@ -19,4 +19,4 @@ spec:
         ports:
         - containerPort: 5000
       imagePullSecrets:
-        - name: harbor-secret     
+        - name:  regcred     
