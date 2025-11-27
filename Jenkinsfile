@@ -6,6 +6,7 @@ pipeline {
         HARBOR_URL = "10.131.103.92:8090"
         HARBOR_PROJECT = "kp1"
         TRIVY_OUTPUT_JSON = "trivy-output.json"
+        VM_IP = "10.131.103.92"
     }
 
     stages {
@@ -102,6 +103,38 @@ pipeline {
                 }
             }
         }
+        
+        stage('Port-forward (bind to VM IP)') {
+           steps {
+             script {
+               echo "Starting port-forward for marks-api (4000) and student-api (5000)..."
+
+              // Optional: wait until pods are ready (helps avoid race conditions)
+               sh "kubectl wait --for=condition=ready pod -l app=marks-api --timeout=60s || true"
+              sh "kubectl wait --for=condition=ready pod -l app=student-api --timeout=60s || true"
+
+               // Kill any previous port-forward processes to avoid duplicates
+            sh """
+              pkill -f 'kubectl port-forward deployment/marks-api' || true
+              pkill -f 'kubectl port-forward deployment/student-api' || true
+            """
+
+            // Start the port forwards in background and bind to 0.0.0.0 (VM interfaces)
+              sh """
+              nohup kubectl port-forward deployment/marks-api 4000:4000 --address 0.0.0.0 >/tmp/pf-marks.log 2>&1 &
+              nohup kubectl port-forward deployment/student-api 5000:5000 --address 0.0.0.0 >/tmp/pf-student.log 2>&1 &
+              sleep 3
+            """
+
+            // Show endpoints & last logs
+            echo "marks-api:   http://${VM_IP}:4000/"
+            echo "student-api: http://${VM_IP}:5000/"
+            sh "tail -n 30 /tmp/pf-marks.log || true"
+            sh "tail -n 30 /tmp/pf-student.log || true"
+        }
+    }
+}
+
 
     }
 }
