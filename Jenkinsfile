@@ -2,15 +2,6 @@
 pipeline {
     agent any
 
-    // ⬅️ New: desired replicas parameter (set at build time)
-    parameters {
-        string(
-            name: 'REPLICAS',
-            defaultValue: '1',
-            description: 'Desired number of replicas for both deployments (e.g., 1, 2, 3, ...)'
-        )
-    }
-
     environment {
         IMAGE_TAG = "${env.BUILD_NUMBER}"
         HARBOR_URL = "10.131.103.92:8090"
@@ -42,14 +33,14 @@ pipeline {
                         echo "Building Docker image for ${c.name}..."
                         sh "docker build -t ${c.name}:${IMAGE_TAG} ./${c.folder}"
 
-                        // Trivy scan
+                        // Trivy scan (fixed to avoid Bad substitution)
                         echo "Running Trivy scan for ${c.name}..."
                         sh "trivy image ${c.name}:${IMAGE_TAG} --severity CRITICAL,HIGH --format json -o ${TRIVY_OUTPUT_JSON}"
                         archiveArtifacts artifacts: "${TRIVY_OUTPUT_JSON}", fingerprint: true
 
                         // Check vulnerabilities (Packages & Vulnerabilities arrays)
                         def vulnerabilities = sh(script: """
-                            jq '[.Results[] | (.Packages // [] | .[]? | select(.Severity==\"CRITICAL\" or .Severity==\"HIGH\")) +
+                            jq '[.Results[] | (.Packages // [] | .[]? | select(.Severity==\"CRITICAL\" or .Severity==\"HIGH\")) + 
                                  (.Vulnerabilities // [] | .[]? | select(.Severity==\"CRITICAL\" or .Severity==\"HIGH\"))] | length' ${TRIVY_OUTPUT_JSON}
                         """, returnStdout: true).trim()
 
@@ -79,10 +70,10 @@ pipeline {
 
                     // Delete old Deployments and Services
                     sh """
-                        kubectl delete deployment student-api --ignore-not-found
-                        kubectl delete deployment marks-api   --ignore-not-found
-                        kubectl delete service student-api    --ignore-not-found
-                        kubectl delete service marks-api      --ignore-not-found
+                    kubectl delete deployment student-api --ignore-not-found
+                    kubectl delete deployment marks-api   --ignore-not-found
+                    kubectl delete service student-api    --ignore-not-found
+                    kubectl delete service marks-api      --ignore-not-found
                     """
 
                     echo "Applying Kubernetes manifests with new images..."
@@ -102,44 +93,33 @@ pipeline {
                 }
             }
         }
-
-        // ⬅️ New: automatic scaling to desired replicas (idempotent)
-        stage('Reconcile Desired Replicas') {
+        stage('Scale Test: Up & Down') {
             steps {
                 script {
-                    def desired = params.REPLICAS as Integer
-                    def deployments = ['student-api', 'marks-api']
+                    echo "Scaling UP to 3 replicas for both services..."
+                    sh 'kubectl scale deployment/student-api --replicas=3'
+                    sh 'kubectl scale deployment/marks-api   --replicas=3'
 
-                    deployments.each { d ->
-                        // Read current replicas (spec) and ready replicas (status)
-                        def currentSpec = sh(script: "kubectl get deploy ${d} -o jsonpath='{.spec.replicas}'", returnStdout: true).trim()
-                        def currentReady = sh(script: "kubectl get deploy ${d} -o jsonpath='{.status.readyReplicas}'", returnStdout: true).trim()
+                    echo "Replica counts after scale-up:"
+                    sh '''
+                        echo "student-api readyReplicas: $(kubectl get deploy student-api -o jsonpath='{.status.readyReplicas}')"
+                        echo "marks-api   readyReplicas: $(kubectl get deploy marks-api   -o jsonpath='{.status.readyReplicas}')"
+                    '''
 
-                        // Normalize nulls to 0
-                        currentSpec = currentSpec ? currentSpec as Integer : 0
-                        currentReady = currentReady ? currentReady as Integer : 0
+                  //  echo "Scaling DOWN to 1 replica for both services..."
+                   // sh 'kubectl scale deployment/student-api --replicas=1'
+                  //  sh 'kubectl scale deployment/marks-api   --replicas=1'
 
-                        echo "Deployment '${d}': spec.replicas=${currentSpec}, readyReplicas=${currentReady}, desired=${desired}"
-
-                        if (currentSpec != desired) {
-                            echo "Scaling '${d}' from ${currentSpec} to ${desired} replicas..."
-                            sh "kubectl scale deployment/${d} --replicas=${desired}"
-
-                            echo "Waiting for rollout to complete for '${d}'..."
-                            sh "kubectl rollout status deployment/${d} --timeout=180s"
-                        } else {
-                            echo "No change needed for '${d}'. Already at desired replicas."
-                        }
-
-                        // Show final status
-                        sh """
-                            echo "${d} desired: \$(kubectl get deploy ${d} -o jsonpath='{.spec.replicas}')"
-                            echo "${d} ready:   \$(kubectl get deploy ${d} -o jsonpath='{.status.readyReplicas}')"
-                        """
-                    }
+                 //   echo "Replica counts after scale-down:"
+                 //   sh '''
+                    //    echo "student-api readyReplicas: $(kubectl get deploy student-api -o jsonpath='{.status.readyReplicas}')"
+                    //    echo "marks-api   readyReplicas: $(kubectl get deploy marks-api   -o jsonpath='{.status.readyReplicas}')"
+                  //  '''
                 }
             }
         }
     }
 }
 
+
+      
