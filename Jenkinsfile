@@ -68,40 +68,43 @@ pipeline {
         }
 
         stage('Delete Old Deployments and Apply New Deployments') {
-            steps {
-                script {
-                    echo "Deleting old deployments..."
+    steps {
+        script {
+            echo "Deleting old deployments..."
 
-                    
-                    // Delete old Deployments and Services
-                    sh """
-                    kubectl delete deployment student-api --ignore-not-found
-                    kubectl delete deployment marks-api   --ignore-not-found
-                    kubectl delete service student-api    --ignore-not-found
-                    kubectl delete service marks-api      --ignore-not-found
-                    """
+            // Use Jenkins-owned kubeconfig
+            withEnv(["KUBECONFIG=/var/lib/jenkins/.kube/config"]) {
 
-                    
-                    echo "Applying Kubernetes manifests with new images..."
+                // Delete old Deployments and Services
+                sh """
+                kubectl delete deployment student-api --ignore-not-found
+                kubectl delete deployment marks-api   --ignore-not-found
+                kubectl delete service student-api    --ignore-not-found
+                kubectl delete service marks-api      --ignore-not-found
+                """
 
-                    // Replace __IMAGE_TAG__ in YAML files
-                    sh """
-                        sed -i 's/__IMAGE_TAG__/${IMAGE_TAG}/g' k8s/student-api-deployment.yaml
-                        sed -i 's/__IMAGE_TAG__/${IMAGE_TAG}/g' k8s/marks-api-deployment.yaml
-                    """
-                    echo "deployment.yamls:"
-                    sh "cat k8s/student-api-deployment.yaml"
-                    sh "cat k8s/marks-api-deployment.yaml"
+                echo "Applying Kubernetes manifests with new images..."
 
-                    // Apply new deployments
-                    sh "kubectl apply -f k8s/student-api-deployment.yaml"
-                    sh "kubectl apply -f k8s/student-service.yaml"
+                // Replace __IMAGE_TAG__ in YAML files
+                sh """
+                    sed -i 's/__IMAGE_TAG__/${IMAGE_TAG}/g' k8s/student-api-deployment.yaml
+                    sed -i 's/__IMAGE_TAG__/${IMAGE_TAG}/g' k8s/marks-api-deployment.yaml
+                """
+                echo "deployment.yamls:"
+                sh "cat k8s/student-api-deployment.yaml"
+                sh "cat k8s/marks-api-deployment.yaml"
 
-                    sh "kubectl apply -f k8s/marks-api-deployment.yaml"
-                    sh "kubectl apply -f k8s/marks-service.yaml"
-                }
+                // Apply new deployments
+                sh "kubectl apply -f k8s/student-api-deployment.yaml"
+                sh "kubectl apply -f k8s/student-service.yaml"
+
+                sh "kubectl apply -f k8s/marks-api-deployment.yaml"
+                sh "kubectl apply -f k8s/marks-service.yaml"
             }
         }
+    }
+}
+
 
     }
 }
