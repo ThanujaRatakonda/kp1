@@ -1,4 +1,3 @@
-
 pipeline {
     agent any
 
@@ -6,7 +5,7 @@ pipeline {
         IMAGE_TAG = "${env.BUILD_NUMBER}"
         HARBOR_URL = "10.131.103.92:8090"
         HARBOR_PROJECT = "kp1"
-        TRIVY_OUTPUT_JSON = "trivy-output.json"   // required for Trivy output
+        TRIVY_OUTPUT_JSON = "trivy-output.json"
     }
 
     stages {
@@ -33,15 +32,20 @@ pipeline {
                         echo "Building Docker image for ${c.name}..."
                         sh "docker build -t ${c.name}:${IMAGE_TAG} ./${c.folder}"
 
-                        // Trivy scan (fixed to avoid Bad substitution)
+                        // Trivy scan
                         echo "Running Trivy scan for ${c.name}..."
-                        sh "trivy image ${c.name}:${IMAGE_TAG} --severity CRITICAL,HIGH --format json -o ${TRIVY_OUTPUT_JSON}"
+                        sh """
+                            trivy image ${c.name}:${IMAGE_TAG} \
+                            --severity CRITICAL,HIGH \
+                            --format json \
+                            -o ${TRIVY_OUTPUT_JSON}
+                        """
                         archiveArtifacts artifacts: "${TRIVY_OUTPUT_JSON}", fingerprint: true
 
-                        // Check vulnerabilities (Packages & Vulnerabilities arrays)
+                        // Check vulnerabilities (safe for both Packages & Vulnerabilities)
                         def vulnerabilities = sh(script: """
-                            jq '[.Results[] | (.Packages // [] | .[]? | select(.Severity==\"CRITICAL\" or .Severity==\"HIGH\")) + 
-                                 (.Vulnerabilities // [] | .[]? | select(.Severity==\"CRITICAL\" or .Severity==\"HIGH\"))] | length' ${TRIVY_OUTPUT_JSON}
+                            jq '[.Results[] | (.Packages // [] | .[]? | select(.Severity=="CRITICAL" or .Severity=="HIGH")) + 
+                                 (.Vulnerabilities // [] | .[]? | select(.Severity=="CRITICAL" or .Severity=="HIGH"))] | length' ${TRIVY_OUTPUT_JSON}
                         """, returnStdout: true).trim()
 
                         if (vulnerabilities.toInteger() > 0) {
@@ -56,7 +60,7 @@ pipeline {
                             sh "docker push ${fullImage}"
                         }
 
-                        // Clean local image
+                        // Clean up local image after pushing to Harbor
                         sh "docker rmi ${c.name}:${IMAGE_TAG} || true"
                     }
                 }
@@ -68,6 +72,7 @@ pipeline {
                 script {
                     echo "Deleting old deployments..."
 
+                    
                     // Delete old Deployments and Services
                     sh """
                     kubectl delete deployment student-api --ignore-not-found
@@ -76,6 +81,7 @@ pipeline {
                     kubectl delete service marks-api      --ignore-not-found
                     """
 
+                    
                     echo "Applying Kubernetes manifests with new images..."
 
                     // Replace __IMAGE_TAG__ in YAML files
@@ -83,6 +89,9 @@ pipeline {
                         sed -i 's/__IMAGE_TAG__/${IMAGE_TAG}/g' k8s/student-api-deployment.yaml
                         sed -i 's/__IMAGE_TAG__/${IMAGE_TAG}/g' k8s/marks-api-deployment.yaml
                     """
+                    echo "deployment.yamls:"
+                    sh "cat k8s/student-api-deployment.yaml"
+                    sh "cat k8s/marks-api-deployment.yaml"
 
                     // Apply new deployments
                     sh "kubectl apply -f k8s/student-api-deployment.yaml"
@@ -93,33 +102,6 @@ pipeline {
                 }
             }
         }
-        stage('Scale Test: Up & Down') {
-            steps {
-                script {
-                    echo "Scaling UP to 3 replicas for both services..."
-                    sh 'kubectl scale deployment/student-api --replicas=3'
-                    sh 'kubectl scale deployment/marks-api   --replicas=3'
 
-                    echo "Replica counts after scale-up:"
-                    sh '''
-                        echo "student-api readyReplicas: $(kubectl get deploy student-api -o jsonpath='{.status.readyReplicas}')"
-                        echo "marks-api   readyReplicas: $(kubectl get deploy marks-api   -o jsonpath='{.status.readyReplicas}')"
-                    '''
-
-                  //  echo "Scaling DOWN to 1 replica for both services..."
-                   // sh 'kubectl scale deployment/student-api --replicas=1'
-                  //  sh 'kubectl scale deployment/marks-api   --replicas=1'
-
-                 //   echo "Replica counts after scale-down:"
-                 //   sh '''
-                    //    echo "student-api readyReplicas: $(kubectl get deploy student-api -o jsonpath='{.status.readyReplicas}')"
-                    //    echo "marks-api   readyReplicas: $(kubectl get deploy marks-api   -o jsonpath='{.status.readyReplicas}')"
-                  //  '''
-                }
-            }
-        }
     }
 }
-
-
-      
