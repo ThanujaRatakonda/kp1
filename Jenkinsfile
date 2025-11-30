@@ -8,7 +8,7 @@ pipeline {
         TRIVY_OUTPUT_JSON = "trivy-output.json"
     }
      parameters {
-        string(name: 'REPLICA_COUNT', defaultValue: '2', description: 'Number of replicas for both microservices')
+        string(name: 'REPLICA_COUNT', defaultValue: '1', description: 'Number of replicas for both microservices')
     }
 
     stages {
