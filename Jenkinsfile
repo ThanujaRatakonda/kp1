@@ -7,6 +7,9 @@ pipeline {
         HARBOR_PROJECT = "kp1"
         TRIVY_OUTPUT_JSON = "trivy-output.json"
     }
+     parameters {
+        string(name: 'REPLICA_COUNT', defaultValue: '2', description: 'Number of replicas for both microservices')
+    }
 
     stages {
 
@@ -104,7 +107,18 @@ pipeline {
                 }
             }
         }
+                  stage('Scale Deployments') {
+            steps {
+                script {
+                    echo "Scaling both microservices to ${params.REPLICA_COUNT} replicas..."
+                    sh "kubectl scale deployment student-api --replicas=${params.REPLICA_COUNT}"
+                    sh "kubectl scale deployment marks-api --replicas=${params.REPLICA_COUNT}"
 
+                    echo "Current deployment status:"
+                    sh "kubectl get deployments"
+                }
+            }
+        }
         
 
     }
